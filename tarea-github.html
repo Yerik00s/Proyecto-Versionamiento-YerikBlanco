@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Actividad: Control de Versiones con GitHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gh-black:    #0d1117;
+      --gh-surface:  #161b22;
+      --gh-border:   #21262d;
+      --gh-muted:    #30363d;
+      --gh-text:     #e6edf3;
+      --gh-dim:      #8b949e;
+      --gh-green:    #3fb950;
+      --gh-green-dim:#1a4a27;
+      --gh-blue:     #58a6ff;
+      --gh-orange:   #f78166;
+      --gh-purple:   #bc8cff;
+      --gh-yellow:   #e3b341;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--gh-black);
+      color: var(--gh-text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID NOISE BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, var(--gh-border) 39px, var(--gh-border) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, var(--gh-border) 39px, var(--gh-border) 40px);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── GLOW BLOB ── */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(63,185,80,0.07) 0%, transparent 70%);
+      top: -150px;
+      left: -150px;
+      pointer-events: none;
+      z-index: 0;
+      animation: blobFloat 10s ease-in-out infinite alternate;
+    }
+
+    @keyframes blobFloat {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(80px, 60px) scale(1.08); }
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--gh-dim);
+      margin-bottom: 52px;
+      letter-spacing: .08em;
+      animation: fadeDown .6s ease both;
+    }
+    .topbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gh-green); box-shadow: 0 0 8px var(--gh-green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+    .topbar-sep { color: var(--gh-muted); }
+
+    /* ── HERO ── */
+    .hero {
+      margin-bottom: 56px;
+      animation: fadeDown .7s .1s ease both;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--gh-green-dim);
+      border: 1px solid var(--gh-green);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      color: var(--gh-green);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+    .hero-badge svg { width:12px; height:12px; fill:var(--gh-green); }
+
+    h1 {
+      font-family: var(--sans);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.02em;
+      margin-bottom: 18px;
+    }
+    h1 span.accent { color: var(--gh-green); }
+    h1 span.dim    { color: var(--gh-dim); }
+
+    .hero-desc {
+      font-size: 14px;
+      color: var(--gh-dim);
+      line-height: 1.8;
+      max-width: 620px;
+      border-left: 2px solid var(--gh-green);
+      padding-left: 16px;
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--gh-dim);
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      margin-top: 52px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gh-border);
+    }
+    .section-label-num {
+      background: var(--gh-muted);
+      color: var(--gh-text);
+      font-size: 10px;
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+
+    /* ── CARD BASE ── */
+    .card {
+      background: var(--gh-surface);
+      border: 1px solid var(--gh-border);
+      border-radius: 10px;
+      padding: 28px 30px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .25s, transform .25s;
+      animation: fadeUp .6s ease both;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .card.green::before  { background: linear-gradient(90deg, var(--gh-green), transparent); }
+    .card.blue::before   { background: linear-gradient(90deg, var(--gh-blue), transparent); }
+    .card.orange::before { background: linear-gradient(90deg, var(--gh-orange), transparent); }
+    .card.purple::before { background: linear-gradient(90deg, var(--gh-purple), transparent); }
+    .card.yellow::before { background: linear-gradient(90deg, var(--gh-yellow), transparent); }
+
+    .card-icon {
+      font-size: 20px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .card h2 {
+      font-family: var(--sans);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--gh-text);
+    }
+    .card p, .card li {
+      font-size: 13px;
+      color: var(--gh-dim);
+      line-height: 1.85;
+    }
+    .card ul { list-style: none; padding: 0; }
+    .card ul li { padding-left: 18px; position: relative; margin-bottom: 6px; }
+    .card ul li::before { content: '›'; position: absolute; left: 0; color: var(--gh-green); font-weight: 700; }
+
+    /* ── STEPS TRACK ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 0 20px;
+      animation: fadeUp .6s ease both;
+    }
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .step-num {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--gh-surface);
+      border: 2px solid var(--gh-green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gh-green);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .step-line {
+      width: 2px;
+      flex: 1;
+      background: var(--gh-border);
+      margin: 4px 0;
+    }
+    .step:last-child .step-line { display: none; }
+    .step-body {
+      background: var(--gh-surface);
+      border: 1px solid var(--gh-border);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .step-body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: 10px 10px 0 0;
+      background: linear-gradient(90deg, var(--gh-green), transparent);
+    }
+    .step-body h3 {
+      font-family: var(--sans);
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--gh-text);
+    }
+    .step-body p {
+      font-size: 13px;
+      color: var(--gh-dim);
+      line-height: 1.8;
+    }
+    .step-body code {
+      background: var(--gh-muted);
+      color: var(--gh-orange);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    /* ── COMMIT PILLS ROW ── */
+    .commits-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .commit-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--gh-muted);
+      border: 1px solid var(--gh-border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--gh-text);
+      letter-spacing: .03em;
+    }
+    .commit-pill .hash {
+      color: var(--gh-blue);
+      font-size: 10px;
+    }
+    .commit-pill .dot { width:6px;height:6px;border-radius:50%;background:var(--gh-green);flex-shrink:0; }
+
+    /* ── TWO COL ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:620px){ .two-col { grid-template-columns: 1fr; } }
+
+    /* ── QUESTIONS BLOCK ── */
+    .question-block {
+      background: var(--gh-surface);
+      border: 1px solid var(--gh-border);
+      border-radius: 10px;
+      padding: 22px 26px;
+      margin-bottom: 14px;
+      animation: fadeUp .6s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .question-block::before {
+      content:'?';
+      position:absolute;
+      right: 20px;
+      top: 12px;
+      font-size: 60px;
+      font-family: var(--sans);
+      font-weight:800;
+      color: var(--gh-muted);
+      line-height:1;
+      pointer-events:none;
+    }
+    .q-tag {
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--gh-purple);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .question-block h3 {
+      font-family: var(--sans);
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--gh-text);
+      line-height: 1.4;
+    }
+
+    /* ── ENTREGABLES ── */
+    .deliverable {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: var(--gh-surface);
+      border: 1px solid var(--gh-border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 12px;
+      animation: fadeUp .6s ease both;
+    }
+    .deliverable-icon {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      display: flex;align-items:center;justify-content:center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .deliverable-icon.g { background: rgba(63,185,80,.15); }
+    .deliverable-icon.b { background: rgba(88,166,255,.15); }
+    .deliverable-icon.o { background: rgba(247,129,102,.15); }
+    .deliverable-body h3 {
+      font-family: var(--sans);
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: var(--gh-text);
+    }
+    .deliverable-body p { font-size: 13px; color: var(--gh-dim); line-height: 1.7; }
+
+    /* ── FOOTER ── */
+    .footer {
+      margin-top: 64px;
+      border-top: 1px solid var(--gh-border);
+      padding-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-left { font-size: 11px; color: var(--gh-muted); }
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--gh-dim);
+    }
+    .footer-right .octicon { color: var(--gh-green); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeDown {
+      from { opacity:0; transform: translateY(-16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(18px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* staggered delays for cards */
+    .step:nth-child(1) { animation-delay: .05s; }
+    .step:nth-child(2) { animation-delay: .12s; }
+    .step:nth-child(3) { animation-delay: .19s; }
+    .step:nth-child(4) { animation-delay: .26s; }
+    .step:nth-child(5) { animation-delay: .33s; }
+    .step:nth-child(6) { animation-delay: .40s; }
+
+    .card:nth-child(1)            { animation-delay: .05s; }
+    .card:nth-child(2)            { animation-delay: .12s; }
+    .question-block:nth-child(1)  { animation-delay: .05s; }
+    .question-block:nth-child(2)  { animation-delay: .12s; }
+    .question-block:nth-child(3)  { animation-delay: .19s; }
+    .question-block:nth-child(4)  { animation-delay: .26s; }
+    .deliverable:nth-child(1)     { animation-delay: .05s; }
+    .deliverable:nth-child(2)     { animation-delay: .12s; }
+    .deliverable:nth-child(3)     { animation-delay: .19s; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <span class="topbar-dot"></span>
+    <span>actividades</span>
+    <span class="topbar-sep">/</span>
+    <span>control-de-versiones</span>
+    <span class="topbar-sep">/</span>
+    <span style="color:var(--gh-text)">github-intro.md</span>
+  </div>
+
+  <!-- STUDENT INFO -->
+  <div style="background:var(--gh-surface);border:1px solid var(--gh-border);border-radius:10px;padding:20px 26px;margin-bottom:36px;display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;animation:fadeDown .65s .05s ease both;">
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Estudiante</div>
+      <div style="font-family:var(--sans);font-size:.95rem;font-weight:700;color:var(--gh-text);">Yerik Blanco Mesén</div>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Sección</div>
+      <div style="font-family:var(--sans);font-size:.95rem;font-weight:700;color:var(--gh-green);">11-2</div>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Institución</div>
+      <div style="font-size:13px;color:var(--gh-text);">CTP Ambientalista Isaías Retana Arias</div>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Profesor</div>
+      <div style="font-size:13px;color:var(--gh-text);">Johan Granados Montero</div>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Especialidad</div>
+      <div style="font-size:13px;color:var(--gh-blue);">Desarrollo de Aplicaciones Móviles</div>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gh-dim);margin-bottom:4px;">Subárea</div>
+      <div style="font-size:13px;color:var(--gh-blue);">Desarrollo de Aplicaciones Móviles y Base de Datos</div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34C3.73 14.36 3.27 13 3.27 13c-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.87.87 2.33.67.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8 8 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Actividad Práctica
+    </div>
+
+    <h1>
+      Control de<br/>
+      <span class="accent">Versiones</span> <span class="dim">con</span><br/>
+      GitHub
+    </h1>
+
+    <p class="hero-desc">
+      Aprende a crear y administrar repositorios digitales, comprender cómo se almacenan archivos, registrar cambios y documentar el avance de un proyecto mediante commits en la plataforma GitHub.
+    </p>
+  </div>
+
+  <!-- PROPÓSITO -->
+  <div class="section-label"><span class="section-label-num">01</span> Propósito</div>
+  <div class="two-col">
+    <div class="card green">
+      <span class="card-icon">🎯</span>
+      <h2>Objetivo Principal</h2>
+      <p>Familiarizarse con el uso de herramientas de control de versiones mediante GitHub, ampliamente utilizada en el desarrollo de software para almacenar proyectos, organizar archivos y registrar cambios a lo largo del tiempo.</p>
+    </div>
+    <div class="card blue">
+      <span class="card-icon">💡</span>
+      <h2>¿Qué aprenderás?</h2>
+      <ul>
+        <li>Crear y administrar un repositorio digital</li>
+        <li>Entender cómo se almacenan los archivos</li>
+        <li>Registrar cambios mediante commits</li>
+        <li>Documentar el avance de un proyecto</li>
+        <li>Comprender el valor del versionamiento</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PASOS -->
+  <div class="section-label"><span class="section-label-num">02</span> Pasos a seguir</div>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Crear cuenta en GitHub</h3>
+        <p>Si aún no tienes una cuenta, regístrate en la plataforma GitHub. Este será tu espacio de trabajo para toda la actividad.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Crear el repositorio público</h3>
+        <p>Crea un repositorio con el nombre <code>Proyecto-Versionamiento-NombreApellido</code>, sustituyendo tu nombre y apellido. El repositorio debe ser de acceso <strong style="color:var(--gh-green)">público</strong>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">3</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Configurar el archivo README.md</h3>
+        <p>Al crear el repositorio, agrega un archivo <code>README.md</code>. En él debes escribir:</p>
+        <ul style="margin-top:10px; list-style:none; padding:0;">
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Tu nombre completo</li>
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> La sección a la que perteneces</li>
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> El nombre del curso</li>
+          <li style="padding-left:18px;position:relative;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Una breve descripción del proyecto</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">4</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Crear el proyecto digital</h3>
+        <p>Desarrolla una página web básica en <strong style="color:var(--gh-orange)">HTML</strong> que incluya:</p>
+        <ul style="margin-top:10px; list-style:none; padding:0;">
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Información personal general</li>
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Al menos una imagen</li>
+          <li style="padding-left:18px;position:relative;margin-bottom:5px;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Una lista de intereses o gustos personales</li>
+          <li style="padding-left:18px;position:relative;font-size:13px;color:var(--gh-dim)"><span style="position:absolute;left:0;color:var(--gh-green);font-weight:700;">›</span> Cualquier contenido adicional que desees agregar</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">5</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Subir archivos y primer commit</h3>
+        <p>Sube los archivos del proyecto al repositorio y registra el primer cambio con un <strong style="color:var(--gh-blue)">commit</strong> que tenga un mensaje claro describiendo la acción realizada.</p>
+        <div class="commits-row" style="margin-top:14px;">
+          <div class="commit-pill"><span class="dot"></span> <span class="hash">a1b2c3d</span> Subida inicial del proyecto HTML</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">6</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <h3>Realizar al menos 4 actualizaciones adicionales</h3>
+        <p>En distintos momentos, realiza <strong style="color:var(--gh-yellow)">4 o más cambios visibles</strong> al proyecto. Cada cambio debe registrarse con un commit descriptivo. Ejemplos de cambios:</p>
+        <div class="commits-row" style="margin-top:14px;">
+          <div class="commit-pill"><span class="dot"></span> Agregar nueva sección</div>
+          <div class="commit-pill"><span class="dot"></span> Modificar contenido existente</div>
+          <div class="commit-pill"><span class="dot"></span> Incorporar imágenes adicionales</div>
+          <div class="commit-pill"><span class="dot"></span> Mejorar la organización</div>
+          <div class="commit-pill"><span class="dot"></span> Agregar nuevas páginas HTML</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- README -->
+  <div class="section-label"><span class="section-label-num">03</span> Actualización del README.md</div>
+  <div class="card orange">
+    <span class="card-icon">📄</span>
+    <h2>Documenta la evolución del proyecto</h2>
+    <p>A lo largo del desarrollo, el archivo <code style="background:var(--gh-muted);color:var(--gh-orange);border-radius:4px;padding:1px 6px;font-size:12px;">README.md</code> debe actualizarse continuamente para reflejar:</p>
+    <ul style="margin-top:14px;">
+      <li>Una descripción más detallada del propósito del proyecto</li>
+      <li>Los cambios realizados durante cada actualización</li>
+      <li>Las fechas en que dichos cambios fueron efectuados</li>
+    </ul>
+    <p style="margin-top:14px;">Este archivo funciona como un <strong style="color:var(--gh-text)">documento de referencia</strong> que permite comprender la evolución del proyecto con el paso del tiempo.</p>
+  </div>
+
+  <!-- PREGUNTAS -->
+  <div class="section-label"><span class="section-label-num">04</span> Preguntas a responder</div>
+  <p style="font-size:13px;color:var(--gh-dim);margin-bottom:20px;line-height:1.8;">Elabora un breve documento donde respondas con tus propias palabras las siguientes preguntas:</p>
+
+  <div class="question-block">
+    <span class="q-tag">Pregunta 01</span>
+    <h3>¿Qué es un repositorio?</h3>
+  </div>
+  <div class="question-block">
+    <span class="q-tag">Pregunta 02</span>
+    <h3>¿Para qué sirve el control de versiones?</h3>
+  </div>
+  <div class="question-block">
+    <span class="q-tag">Pregunta 03</span>
+    <h3>¿Qué es un commit?</h3>
+  </div>
+  <div class="question-block">
+    <span class="q-tag">Pregunta 04</span>
+    <h3>¿Cuál fue el cambio más importante que realizaste durante el desarrollo del proyecto?</h3>
+  </div>
+
+  <!-- ENTREGABLES -->
+  <div class="section-label"><span class="section-label-num">05</span> Entregables</div>
+
+  <div class="deliverable">
+    <div class="deliverable-icon g">🔗</div>
+    <div class="deliverable-body">
+      <h3>Enlace al repositorio</h3>
+      <p>Entrega el enlace directo a tu repositorio público en GitHub.</p>
+    </div>
+  </div>
+  <div class="deliverable">
+    <div class="deliverable-icon b">📸</div>
+    <div class="deliverable-body">
+      <h3>Captura del historial de commits</h3>
+      <p>Una captura de pantalla donde se evidencie el historial de commits realizados durante el proyecto.</p>
+    </div>
+  </div>
+  <div class="deliverable">
+    <div class="deliverable-icon o">📝</div>
+    <div class="deliverable-body">
+      <h3>Documento de respuestas</h3>
+      <p>Un breve documento con las respuestas a las cuatro preguntas planteadas, redactadas con tus propias palabras.</p>
+    </div>
+  </div>
+
+  <!-- CIERRE -->
+  <div class="section-label"><span class="section-label-num">06</span> Conclusión</div>
+  <div class="card purple">
+    <span class="card-icon">🚀</span>
+    <h2>¿Por qué importa el control de versiones?</h2>
+    <p>Esta actividad tiene como finalidad que comprendas la importancia del control de versiones en el desarrollo de proyectos digitales. El uso adecuado de herramientas como GitHub permite:</p>
+    <ul style="margin-top:14px;">
+      <li>Organizar la información de manera eficiente</li>
+      <li>Evitar la pérdida de archivos importantes</li>
+      <li>Facilitar el seguimiento de los cambios realizados</li>
+      <li>Documentar el avance de un proyecto a lo largo del tiempo</li>
+    </ul>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">Actividad · Control de Versiones con GitHub</div>
+    <div class="footer-right">
+      <span class="octicon">●</span>
+      <span>5 commits mínimos requeridos</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
